@@ -36,26 +36,25 @@ class DefaultSort:
         inputs = [FileReader(i) for i in input_files]
         outputs = [open(i, 'wb') for i in output_files]
         j = 0
-        sorted_set = list()
         while not self.__merged(inputs):
-            min_value = MAX_VALUE
-            min_index = -1
+            number = MAX_VALUE
+            index = -1
             for i in range(len(inputs)):
                 binary_number = inputs[i].get_current()
                 if binary_number:
                     int_number = int.from_bytes(binary_number, byteorder='big')
-                    if not sorted_set or int_number >= sorted_set[-1]:
-                        if int_number <= min_value:
-                            min_value = int_number
-                            min_index = i
-            if min_index == -1:
-                for num in sorted_set: outputs[j].write(num.to_bytes(4, "big"))
-                sorted_set.clear()
+                    prev = inputs[i].get_prev()
+                    if not prev or int_number >= int.from_bytes(prev, byteorder='big'):
+                        if int_number <= number:
+                            number = int_number
+                            index = i
+            if index == -1:
+                for i in inputs:
+                    i.null_prev()
                 j = (j + 1) % self.__number_of_files
             else:
-                sorted_set.append(min_value)
-                inputs[min_index].next_number()
-        for num in sorted_set: outputs[j].write(num.to_bytes(4, "big"))
+                outputs[j].write(number.to_bytes(4, "big"))
+                inputs[index].next_number()
         for i in inputs: i.close_file()
         for o in outputs: o.close()
 
@@ -77,8 +76,14 @@ class DefaultSort:
 class FileReader:
     def __init__(self, file_path: str):
         self.__file = open(file_path, "rb")
+        self.__prev = None
         self.__current_value = self.__file.read(4)
-        self.__next_value = self.__file.read(4)
+
+    def null_prev(self):
+        self.__prev = None
+
+    def get_prev(self):
+        return self.__prev
 
     def get_current(self):
         return self.__current_value
@@ -87,6 +92,4 @@ class FileReader:
         self.__file.close()
 
     def next_number(self):
-        temp = self.__current_value
-        self.__current_value, self.__next_value = self.__next_value, self.__file.read(4)
-        return temp
+        self.__prev, self.__current_value = self.__current_value, self.__file.read(4)
