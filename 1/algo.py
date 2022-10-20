@@ -1,6 +1,5 @@
 import os
 import random
-import shutil
 from config import MIN_VALUE, MAX_VALUE
 
 
